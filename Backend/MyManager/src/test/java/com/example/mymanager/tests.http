@@ -1,0 +1,166 @@
+@baseUrl = http://localhost:8080
+@token = 
+
+### ==============================================
+### 1. Register a new user
+### (Using $randomInt to make the email unique every time)
+### ==============================================
+
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "email": "test-{{$randomInt}}@example.com",
+  "password": "password123"
+}
+
+### ==============================================
+### 2. Log in with that user
+### This request has a name ("loginRequest") and a script
+### that captures the 'token' from the response.
+### ==============================================
+@name loginRequest
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "test-{{$randomInt}}@example.com",
+  "password": "password123"
+}
+
+> {%
+  // This script runs after the request and saves the token
+  client.global.set("token", response.body.token);
+%}
+
+### ==============================================
+### 3. Get all folders (should be empty)
+### All requests from here on use the captured token
+### ==============================================
+
+GET {{baseUrl}}/api/folders
+Authorization: Bearer {{token}}
+
+
+### ==============================================
+### 4. Create a new folder
+### We capture the new folder's ID to use it later
+### ==============================================
+@name createFolderRequest
+POST {{baseUrl}}/api/folders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "My First Folder",
+  "color": "blue"
+}
+
+> {%
+  client.global.set("folderId", response.body.id);
+%}
+
+
+### ==============================================
+### 5. Get all folders (should show one)
+### ==============================================
+
+GET {{baseUrl}}/api/folders
+Authorization: Bearer {{token}}
+
+
+### ==============================================
+### 6. Create a new note INSIDE that folder
+### We use the {{folderId}} variable captured above
+### ==============================================
+@name createNoteRequest
+POST {{baseUrl}}/api/folders/{{folderId}}/notes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "My First Note",
+  "cueContent": "Cues go here",
+  "noteContent": "Main notes go here",
+  "summaryContent": "Summary goes here"
+}
+
+> {%
+  client.global.set("noteId", response.body.id);
+%}
+
+
+### ==============================================
+### 7. Get the details of that one note
+### ==============================================
+
+GET {{baseUrl}}/api/notes/{{noteId}}
+Authorization: Bearer {{token}}
+
+
+### ==============================================
+### 8. Update the note
+### ==============================================
+
+PUT {{baseUrl}}/api/notes/{{noteId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "My Updated Note Title",
+  "cueContent": "Updated cues",
+  "noteContent": "Updated main notes",
+  "summaryContent": "Updated summary"
+}
+
+
+### ==============================================
+### 9. Get all alerts (should be empty)
+### ==============================================
+
+GET {{baseUrl}}/api/alerts
+Authorization: Bearer {{token}}
+
+
+### ==============================================
+### 10. Create a new alert
+### ==============================================
+@name createAlertRequest
+POST {{baseUrl}}/api/alerts
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Test Alert",
+  "date": "2025-12-01",
+  "priority": "High"
+}
+
+> {%
+  client.global.set("alertId", response.body.id);
+%}
+
+
+### ==============================================
+### 11. Delete the alert
+### ==============================================
+
+DELETE {{baseUrl}}/api/alerts/{{alertId}}
+Authorization: Bearer {{token}}
+
+
+### ==============================================
+### 12. Delete the note
+### ==============================================
+
+DELETE {{baseUrl}}/api/notes/{{noteId}}
+Authorization: Bearer {{token}}
+
+
+### ==============================================
+### 13. Delete the folder
+### ==============================================
+
+DELETE {{baseUrl}}/api/folders/{{folderId}}
+Authorization: Bearer {{token}}
