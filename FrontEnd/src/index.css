@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* --- Add this to your main index.css file --- */
+
+/* This makes the editor's text white */
+.ql-editor {
+  color: #fff !important;
+}
+
+/* This styles the toolbar */
+.ql-toolbar {
+  border-radius: 8px 8px 0 0 !important;
+  background: #1e1e21; /* Darker background for toolbar */
+  border: 1px solid #444 !important;
+}
+
+/* This styles the main content area */
+.ql-container {
+  border-radius: 0 0 8px 8px !important;
+  border: 1px solid #444 !important;
+  border-top: 0 !important; /* Remove double border */
+}
+
+/* This styles the toolbar icons */
+.ql-toolbar .ql-stroke {
+  stroke: #aaa !important;
+}
+.ql-toolbar .ql-fill {
+  fill: #aaa !important;
+}
+.ql-toolbar button:hover .ql-stroke {
+  stroke: #fff !important;
+}
+.ql-toolbar button:hover .ql-fill {
+  fill: #fff !important;
+}
+.ql-toolbar .ql-active .ql-stroke {
+  stroke: #4299e1 !important; /* Blue color for active button */
+}
