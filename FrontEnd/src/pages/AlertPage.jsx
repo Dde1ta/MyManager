@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // Import useEffect
 import BackButton from '../components/common/backbutton.jsx';
+import apiClient from '../api/apiClient'; // Import our API client
 
 // --- SVG Icons ---
+// ... (PlusIcon, PencilIcon, TrashIcon components remain the same)
 const PlusIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -18,19 +20,15 @@ const TrashIcon = () => (
   </svg>
 );
 
+
 // --- Mock Data ---
-const initialAlerts = [
-  { id: 1, title: "Deadline: Assignment FLAT", date: "2025-11-11", priority: "High" },
-  { id: 2, title: "Deadline: Practical files ADBMS", date: "2025-11-10", priority: "High" },
-  { id: 3, title: "Submit project proposal", date: "2025-11-15", priority: "Medium" },
-  { id: 4, title: "Study group for ML quiz", date: "2025-11-12", priority: "Low" },
-];
+// const initialAlerts = [ ... ]; // <-- MOCK DATA REMOVED
 
 // --- Reusable Components ---
 
 /** Card for displaying a single alert */
 const AlertCard = ({ alert, onEdit, onDelete }) => {
-  
+  // ... (AlertCard component remains the same)
   // Helper to get color based on priority
   const getPriorityClass = (priority) => {
     switch (priority) {
@@ -61,21 +59,35 @@ const AlertCard = ({ alert, onEdit, onDelete }) => {
 };
 
 /** Modal (popup) for creating or editing an alert */
-const AlertModal = ({ onClose, onSave, initialData }) => {
+const AlertModal = ({ onClose, onSave, initialData, apiCall }) => { // <-- Add apiCall prop
   const [title, setTitle] = useState(initialData?.title || "");
   const [date, setDate] = useState(initialData?.date || "");
   const [priority, setPriority] = useState(initialData?.priority || "Medium");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title || !date) return; // Simple validation
-    onSave({ 
-      id: initialData?.id || Date.now(), 
+    
+    setIsSubmitting(true);
+    const alertData = { 
+      // id is only included when editing
+      ...(initialData?.id && { id: initialData.id }),
       title, 
       date, 
       priority 
-    });
-    onClose();
+    };
+
+    try {
+      await apiCall(alertData); // <-- Use the passed-in API function
+      onSave(alertData); // <-- Update the UI
+      onClose(); // Close modal on success
+    } catch (error) {
+      console.error("Failed to save alert:", error);
+      // We could show an error in the modal here
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   const isEditing = !!initialData;
@@ -94,6 +106,7 @@ const AlertModal = ({ onClose, onSave, initialData }) => {
         </h2>
         <form onSubmit={handleSubmit}>
           
+          {/* ... (Form inputs: Title, Date, Priority remain the same) ... */}
           {/* Title */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-zinc-400 mb-2">Title</label>
@@ -103,6 +116,7 @@ const AlertModal = ({ onClose, onSave, initialData }) => {
               onChange={e => setTitle(e.target.value)}
               className="w-full p-3 bg-zinc-700 text-white rounded-md border border-zinc-600 focus:border-blue-500 focus:ring-blue-500"
               placeholder="e.g., Submit Assignment"
+              disabled={isSubmitting}
             />
           </div>
 
@@ -114,6 +128,7 @@ const AlertModal = ({ onClose, onSave, initialData }) => {
               value={date}
               onChange={e => setDate(e.target.value)}
               className="w-full p-3 bg-zinc-700 text-white rounded-md border border-zinc-600 focus:border-blue-500 focus:ring-blue-500"
+              disabled={isSubmitting}
             />
           </div>
 
@@ -124,6 +139,7 @@ const AlertModal = ({ onClose, onSave, initialData }) => {
               value={priority}
               onChange={e => setPriority(e.target.value)}
               className="w-full p-3 bg-zinc-700 text-white rounded-md border border-zinc-600 focus:border-blue-500 focus:ring-blue-500"
+              disabled={isSubmitting}
             >
               <option>Low</option>
               <option>Medium</option>
@@ -131,20 +147,23 @@ const AlertModal = ({ onClose, onSave, initialData }) => {
             </select>
           </div>
 
+          
           {/* Action Buttons */}
           <div className="flex justify-end gap-4">
             <button
               type="button"
               onClick={onClose}
-              className="py-2 px-4 bg-zinc-600 text-white rounded-md font-medium hover:bg-zinc-500"
+              disabled={isSubmitting}
+              className="py-2 px-4 bg-zinc-600 text-white rounded-md font-medium hover:bg-zinc-500 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="py-2 px-4 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-500"
+              disabled={isSubmitting}
+              className="py-2 px-4 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-500 disabled:opacity-50"
             >
-              {isEditing ? "Save Changes" : "Create"}
+              {isSubmitting ? "Saving..." : (isEditing ? "Save Changes" : "Create")}
             </button>
           </div>
         </form>
@@ -157,9 +176,29 @@ const AlertModal = ({ onClose, onSave, initialData }) => {
 // --- Main Page Component ---
 
 export default function AlertsPage() {
-  const [alerts, setAlerts] = useState(initialAlerts);
+  const [alerts, setAlerts] = useState([]); // <-- Start with empty array
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAlert, setEditingAlert] = useState(null); // null = new, object = editing
+
+  // --- ADDED: Fetch alerts from backend ---
+  useEffect(() => {
+    const fetchAlerts = async () => {
+      try {
+        setError('');
+        setIsLoading(true);
+        const response = await apiClient.get('/alerts');
+        setAlerts(response.data);
+      } catch (err) {
+        console.error("Failed to fetch alerts:", err);
+        setError("Could not load your alerts.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchAlerts();
+  }, []); // Runs once on page load
 
   const handleCreateClick = () => {
     setEditingAlert(null);
@@ -171,17 +210,47 @@ export default function AlertsPage() {
     setIsModalOpen(true);
   };
 
-  const handleDeleteClick = (alertId) => {
+  const handleDeleteClick = async (alertId) => {
+    // Optimistic UI update: remove from state immediately
+    const originalAlerts = [...alerts];
     setAlerts(alerts.filter(a => a.id !== alertId));
+    
+    try {
+      // Send delete request to backend
+      await apiClient.delete(`/alerts/${alertId}`);
+    } catch (err) {
+      console.error("Failed to delete alert:", err);
+      // If it fails, revert the state
+      setAlerts(originalAlerts);
+      setError("Failed to delete alert. Please try again.");
+    }
   };
 
-  const handleSave = (savedAlert) => {
+  // --- UPDATED: This function is passed to the modal ---
+  const handleApiSave = async (alertData) => {
     if (editingAlert) {
-      // We are editing
+      // This is an UPDATE (PUT) request
+      await apiClient.put(`/alerts/${alertData.id}`, alertData);
+    } else {
+      // This is a CREATE (POST) request
+      await apiClient.post('/alerts', alertData);
+    }
+  };
+
+  // --- UPDATED: This updates the local UI state after API success ---
+  const handleLocalSave = (savedAlert) => {
+    if (editingAlert) {
+      // We are editing: find and replace in state
       setAlerts(alerts.map(a => a.id === savedAlert.id ? savedAlert : a));
     } else {
-      // We are creating
-      setAlerts([savedAlert, ...alerts]);
+      // We are creating: add to state (we need to refresh to get the real ID)
+      // A better way is to get the new alert back from the POST response
+      // For now, let's just refetch all alerts to get the new one.
+      const fetchAlerts = async () => {
+        const response = await apiClient.get('/alerts');
+        setAlerts(response.data);
+      };
+      fetchAlerts();
     }
   };
 
@@ -189,7 +258,7 @@ export default function AlertsPage() {
     <div className="min-h-screen bg-zinc-900 text-white p-8">
       <div className="max-w-7xl mx-auto">
         
-        {/* --- Header --- */}
+        {/* ... (Header and BackButton remain the same) ... */}
         <div className="mb-8">
           <BackButton to="/" />
           <div className="flex justify-between items-center mt-4">
@@ -204,19 +273,26 @@ export default function AlertsPage() {
           </div>
         </div>
 
+
+        {/* --- ADDED: Loading and Error States --- */}
+        {isLoading && <p className="text-center text-zinc-400">Loading alerts...</p>}
+        {error && <p className="text-center text-red-500">{error}</p>}
+
         {/* --- Alerts Grid --- */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {alerts.map((alert) => (
-            <AlertCard
-              key={alert.id}
-              alert={alert}
-              onEdit={handleEditClick}
-              onDelete={handleDeleteClick}
-            />
-          ))}
-        </div>
+        {!isLoading && !error && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {alerts.map((alert) => (
+              <AlertCard
+                key={alert.id}
+                alert={alert}
+                onEdit={handleEditClick}
+                onDelete={handleDeleteClick}
+              />
+            ))}
+          </div>
+        )}
         
-        {alerts.length === 0 && (
+        {!isLoading && alerts.length === 0 && (
           <div className="text-center text-zinc-500 py-20">
             <h2 className="text-2xl font-semibold">No alerts found</h2>
             <p className="mt-2">Click "New Alert" to get started.</p>
@@ -229,7 +305,8 @@ export default function AlertsPage() {
       {isModalOpen && (
         <AlertModal
           onClose={() => setIsModalOpen(false)}
-          onSave={handleSave}
+          onSave={handleLocalSave}
+          apiCall={handleApiSave} // <-- Pass the API function
           initialData={editingAlert}
         />
       )}

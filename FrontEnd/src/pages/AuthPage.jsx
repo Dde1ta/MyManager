@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext'; // Import useAuth
+import { useAuth } from '../hooks/useAuth.js'; // <-- UPDATED: Import from new hooks file
 import apiClient from '../api/apiClient'; // Import our API client
 
 // --- SVG Icons for inputs ---

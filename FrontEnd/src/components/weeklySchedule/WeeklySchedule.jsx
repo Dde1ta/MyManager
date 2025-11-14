@@ -6,9 +6,16 @@ import AddTimeSlot from '../timeTable/AddTimeSlot.jsx';
 /**
  * WeeklySchedule Component
  * Displays the schedule for a selected day with proper positioning
- * Supports adding, editing, and deleting time slots
+ * Calls API functions passed from parent for add, edit, delete
  */
-const WeeklySchedule = ({ dayName, schedule, onScheduleChange }) => {
+const WeeklySchedule = ({ 
+  dayName, 
+  schedule, 
+  // --- UPDATED PROPS ---
+  onAddSlot,
+  onEditSlot,
+  onDeleteSlot
+}) => {
   const [isAdding, setIsAdding] = useState(false);
 
   // Helper to determine justify class for TimeSlot positioning
@@ -21,27 +28,19 @@ const WeeklySchedule = ({ dayName, schedule, onScheduleChange }) => {
     }
   };
 
+  // --- UPDATED: These handlers now call the API props ---
   const handleEdit = (id, updatedData) => {
-    const updatedSchedule = schedule.map(item =>
-      item.id === id ? { ...item, ...updatedData } : item
-    );
-    onScheduleChange(updatedSchedule);
+    onEditSlot(id, updatedData);
   };
 
   const handleDelete = (id) => {
     if (window.confirm('Are you sure you want to delete this time slot?')) {
-      const updatedSchedule = schedule.filter(item => item.id !== id);
-      onScheduleChange(updatedSchedule);
+      onDeleteSlot(id);
     }
   };
 
   const handleAdd = (newSlotData) => {
-    const newSlot = {
-      id: Date.now(), // Generate unique ID
-      ...newSlotData
-    };
-    const updatedSchedule = [...schedule, newSlot];
-    onScheduleChange(updatedSchedule);
+    onAddSlot(newSlotData);
     setIsAdding(false);
   };
 
@@ -124,7 +123,10 @@ WeeklySchedule.propTypes = {
       position: PropTypes.oneOf(['start', 'center', 'end'])
     })
   ).isRequired,
-  onScheduleChange: PropTypes.func.isRequired
+  // --- UPDATED PROPTYPES ---
+  onAddSlot: PropTypes.func.isRequired,
+  onEditSlot: PropTypes.func.isRequired,
+  onDeleteSlot: PropTypes.func.isRequired
 };
 
 export default WeeklySchedule;
