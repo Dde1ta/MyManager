@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('user');
     setToken(null);
     setUser(null);
-    navigate('/oauth'); // Redirect to login page on logout
+    navigate('/'); // Redirect to login page on logout
   };
   
   // Optional: Add a listener to sync across tabs

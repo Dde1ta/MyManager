@@ -75,7 +75,7 @@ export default function AuthPage() {
       login(userData, token);
       
       // Redirect to the homepage
-      navigate('/'); 
+      navigate('/home'); 
     } catch (err) {
       setError('Failed to log in. Please check your email and password.');
       console.error(err);
@@ -105,7 +105,7 @@ export default function AuthPage() {
       login(userData, token); 
       
       // Redirect to the homepage
-      navigate('/');
+      navigate('/home');
     } catch (err) {
       setError('Failed to register. Email or username may already be taken.');
       console.error(err);
