@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth.js'; // <-- UPDATED: Import from new hooks file
 import apiClient from '../api/apiClient'; // Import our API client
-
+// --- FIX: Import from the correct file in /context ---
+import { useAuth } from '../context/useAuth.js'; 
 // --- SVG Icons for inputs ---
 const UserIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-zinc-400">
