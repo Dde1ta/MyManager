@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext'; // Import useAuth
+import apiClient from '../api/apiClient'; // Import our API client
 
 // --- SVG Icons for inputs ---
 const UserIcon = () => (
@@ -21,7 +24,7 @@ const LockIcon = () => (
 );
 
 /** Reusable Input Field Component */
-const InputField = ({ icon, type, placeholder, value, onChange }) => (
+const InputField = ({ icon, type, placeholder, value, onChange, disabled }) => (
   <div className="relative">
     <span className="absolute inset-y-0 left-0 flex items-center pl-3">
       {icon}
@@ -31,7 +34,9 @@ const InputField = ({ icon, type, placeholder, value, onChange }) => (
       placeholder={placeholder}
       value={value}
       onChange={onChange}
-      className="w-full bg-zinc-700 text-white placeholder-zinc-400 border border-zinc-600 rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      disabled={disabled}
+      required // Add browser-side validation
+      className="w-full bg-zinc-700 text-white placeholder-zinc-400 border border-zinc-600 rounded-lg py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
     />
   </div>
 );
@@ -48,22 +53,64 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  const handleLogin = (e) => {
+  // State for API feedback
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  const { login } = useAuth(); // Get the login function from context
+  const navigate = useNavigate();
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-    // --- BACKEND API CALL ---
-    // Here you would call: POST /api/auth/login
-    console.log("Logging in with:", { email, password });
+    setError('');
+    setIsLoading(true);
+    try {
+      // Call the backend /api/auth/login endpoint
+      const response = await apiClient.post('/auth/login', { email, password });
+      
+      // Separate token from user data (email, id)
+      const { token, ...userData } = response.data;
+      
+      // Call the context 'login' function to save data and token
+      login(userData, token);
+      
+      // Redirect to the homepage
+      navigate('/'); 
+    } catch (err) {
+      setError('Failed to log in. Please check your email and password.');
+      console.error(err);
+      setIsLoading(false);
+    }
+    // No need to setIsLoading(false) on success, as we are navigating away
   };
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
+    setError('');
+
     if (password !== confirmPassword) {
-      alert("Passwords don't match!");
+      setError("Passwords don't match!");
       return;
     }
-    // --- BACKEND API CALL ---
-    // Here you would call: POST /api/auth/register
-    console.log("Registering with:", { username, email, password });
+
+    setIsLoading(true);
+    try {
+      // Call the backend /api/auth/register endpoint
+      const response = await apiClient.post('/auth/register', { username, email, password });
+      
+      // Separate token from user data
+      const { token, ...userData } = response.data;
+      
+      // Log the user in immediately after registering
+      login(userData, token); 
+      
+      // Redirect to the homepage
+      navigate('/');
+    } catch (err) {
+      setError('Failed to register. Email or username may already be taken.');
+      console.error(err);
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -89,6 +136,7 @@ export default function AuthPage() {
               placeholder="Username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              disabled={isLoading}
             />
           )}
 
@@ -99,6 +147,7 @@ export default function AuthPage() {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            disabled={isLoading}
           />
 
           {/* Password */}
@@ -108,6 +157,7 @@ export default function AuthPage() {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            disabled={isLoading}
           />
 
           {/* Confirm Password (Register only) */}
@@ -118,15 +168,25 @@ export default function AuthPage() {
               placeholder="Confirm Password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
+              disabled={isLoading}
             />
           )}
           
+          {/* Error Message Display */}
+          {error && (
+            <p className="text-red-500 text-sm text-center pt-2">{error}</p>
+          )}
+
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow-lg hover:bg-blue-500 transition-colors duration-200"
+            disabled={isLoading}
+            className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow-lg hover:bg-blue-500 transition-colors duration-200 disabled:bg-zinc-500"
           >
-            {isLoginView ? "Login" : "Create Account"}
+            {isLoading
+              ? (isLoginView ? 'Logging in...' : 'Creating account...')
+              : (isLoginView ? 'Login' : 'Create Account')
+            }
           </button>
         </form>
 
@@ -134,8 +194,12 @@ export default function AuthPage() {
         <p className="text-center text-zinc-400 mt-8">
           {isLoginView ? "Don't have an account?" : "Already have an account?"}
           <button
-            onClick={() => setIsLoginView(!isLoginView)}
-            className="font-medium text-blue-400 hover:text-blue-300 ml-2"
+            onClick={() => {
+              setIsLoginView(!isLoginView);
+              setError(''); // Clear errors when switching views
+            }}
+            disabled={isLoading}
+            className="font-medium text-blue-400 hover:text-blue-300 ml-2 disabled:opacity-50"
           >
             {isLoginView ? "Sign Up" : "Login"}
           </button>
