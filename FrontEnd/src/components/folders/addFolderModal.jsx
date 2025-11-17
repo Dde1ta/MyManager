@@ -8,7 +8,7 @@ const AddFolderModal = ({ onClose, onCreate }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!title) return; // Simple validation
-    onCreate({ id: Date.now(), title, color });
+    onCreate({ title, color });
     onClose();
   };
 

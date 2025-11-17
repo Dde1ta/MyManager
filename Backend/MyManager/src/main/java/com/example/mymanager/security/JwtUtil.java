@@ -18,11 +18,13 @@ import java.util.function.Function;
 @Component
 public class JwtUtil {
 
+    // This reads the key from application.properties
     @Value("${jwt.secret}")
     private String secretKey;
 
     private final long EXPIRATION_TIME = 1000 * 60 * 60 * 10; // 10 hours
 
+    // Helper method to decode the key from the properties file
     private Key getSigningKey() {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         return Keys.hmacShaKeyFor(keyBytes);
@@ -35,7 +37,7 @@ public class JwtUtil {
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256) // <--- Uses the static key
                 .compact();
     }
 
@@ -44,6 +46,7 @@ public class JwtUtil {
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
 
+    // Overloaded method for filter checking
     public Boolean validateToken(String token) {
         try {
             Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(token);
@@ -72,7 +75,7 @@ public class JwtUtil {
 
     private Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
+                .setSigningKey(getSigningKey()) // <--- Uses the static key
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
