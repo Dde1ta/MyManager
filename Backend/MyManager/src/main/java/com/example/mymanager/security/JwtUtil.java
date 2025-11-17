@@ -3,12 +3,12 @@ package com.example.mymanager.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets; // Import this
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
@@ -18,17 +18,18 @@ import java.util.function.Function;
 @Component
 public class JwtUtil {
 
-    // This reads the key from application.properties
     @Value("${jwt.secret}")
     private String secretKey;
 
     private final long EXPIRATION_TIME = 1000 * 60 * 60 * 10; // 10 hours
 
-    // Helper method to decode the key from the properties file
+    // --- THIS IS THE FIX ---
     private Key getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
-        return Keys.hmacShaKeyFor(keyBytes);
+        // We use the raw bytes of the string. No Base64 decoding required.
+        // This prevents the "Last unit does not have enough valid bits" error.
+        return Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
     }
+    // -----------------------
 
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
@@ -37,7 +38,7 @@ public class JwtUtil {
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256) // <--- Uses the static key
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
@@ -46,7 +47,6 @@ public class JwtUtil {
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
 
-    // Overloaded method for filter checking
     public Boolean validateToken(String token) {
         try {
             Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(token);
@@ -75,7 +75,7 @@ public class JwtUtil {
 
     private Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey()) // <--- Uses the static key
+                .setSigningKey(getSigningKey())
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
