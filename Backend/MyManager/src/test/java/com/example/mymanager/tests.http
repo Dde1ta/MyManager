@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:8080
-@token = 
+@token = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0LXt7JHJhbmRvbUludH19QGV4YW1wbGUuY29tIiwiaWF0IjoxNzYzNDAwNTQxLCJleHAiOjE3NjM0MzY1NDF9.Nd9Vvg3qRu9EuYHmKE8RpJsvwtMcHIJXAwT37Z5veZ0
 
 ### ==============================================
 ### 1. Register a new user

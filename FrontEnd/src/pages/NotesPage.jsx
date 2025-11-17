@@ -1,121 +1,104 @@
 import React, { useState, useEffect } from 'react';
 import NotesNode from '../components/notesZone/notesNode';
 import NewNote from '../components/notesZone/newNote';
-import { useNavigate, useParams } from 'react-router-dom'; // Import useParams
-import apiClient from '../api/apiClient'; // Import API client
+import { useNavigate, useParams } from 'react-router-dom';
+import apiClient from '../api/apiClient';
 
-// --- Mock Data ---
-// const notesData = [ ... ]; // <-- MOCK DATA REMOVED
-
-// --- Reusable Components (from Homepage) ---
-// ... (BackIcon component remains the same) ...
 const BackIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
   </svg>
 );
 
-
-// --- Main Page Component ---
- 
-export default function NotesPage({ folderTitle = "Notes" }) { // Default title
+export default function NotesPage() {
   const navigate = useNavigate();
-  const { folderId } = useParams(); // <-- Get folderId from URL
-  const [notes, setNotes] = useState([]); // <-- Start with empty array
+  const { folderId } = useParams();
+  
+  const [notes, setNotes] = useState([]);
+  const [folderTitle, setFolderTitle] = useState("Notes"); // State for title
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  // We'd also fetch the folder details to get its title, but let's skip for now
 
-  // --- ADDED: Fetch notes for this folder ---
   useEffect(() => {
-    if (!folderId) return; // Don't fetch if no folderId
+    if (!folderId) return;
     
-    const fetchNotes = async () => {
+    const fetchData = async () => {
       try {
         setError('');
         setIsLoading(true);
-        // Call backend: GET /api/folders/{folderId}/notes
-        const response = await apiClient.get(`/folders/${folderId}/notes`);
-        setNotes(response.data);
+        
+        // 1. Fetch Notes
+        const notesRes = await apiClient.get(`/folders/${folderId}/notes`);
+        setNotes(notesRes.data);
+
+        // 2. Fetch Folder Details (for the Title)
+        const folderRes = await apiClient.get(`/folders/${folderId}`);
+        setFolderTitle(folderRes.data.title);
+
       } catch (err) {
-        console.error("Failed to fetch notes:", err);
-        setError("Could not load notes for this folder.");
+        console.error("Error fetching data:", err);
+        setError("Could not load content.");
       } finally {
         setIsLoading(false);
       }
     };
-    fetchNotes();
-  }, [folderId]); // Re-run if folderId changes
-
-  const handleBackClick = () => {
-    navigate('/notes/folders');
-  };
-
-  const handleNoteClick = (noteId) => {
-    navigate(`/notes/view/${noteId}`);
-  };
+    fetchData();
+  }, [folderId]);
 
   const handleNewNoteClick = async () => {
-    // --- ADDED: Create a new note ---
     try {
-      const newNote = {
-        title: "Untitled Note",
-        cueContent: "",
-        noteContent: "",
-        summaryContent: ""
-      };
-      // Call backend: POST /api/folders/{folderId}/notes
+      const newNote = { title: "Untitled Note", cueContent: "", noteContent: "", summaryContent: "" };
       const response = await apiClient.post(`/folders/${folderId}/notes`, newNote);
-      // Navigate to the new note's page
       navigate(`/notes/view/${response.data.id}`);
     } catch (err) {
-      console.error("Failed to create note:", err);
-      setError("Could not create a new note.");
+      console.error(err);
+      setError("Could not create note.");
+    }
+  };
+
+  // --- Added Delete Handler ---
+  const handleDeleteNote = async (e, noteId) => {
+    e.stopPropagation(); // Prevent opening the note when clicking delete
+    if(!window.confirm("Delete this note?")) return;
+
+    try {
+      await apiClient.delete(`/notes/${noteId}`);
+      setNotes(notes.filter(n => n.id !== noteId)); // Remove from UI
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete note");
     }
   };
 
   return (
     <div className="min-h-screen bg-zinc-900 text-white p-8">
       <div className="max-w-7xl mx-auto">
-        
-        {/* ... (Header and BackButton remain the same) ... */}
         <div className="mb-8">
-          <button onClick={handleBackClick} className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors mb-4">
+          <button onClick={() => navigate('/notes/folders')} className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors mb-4">
             <BackIcon />
-            <span>Back to all folders</span>
+            <span>Back to folders</span>
           </button>
-          
           <h1 className="text-4xl font-bold">{folderTitle}</h1>
         </div>
         
-        {/* --- ADDED: Loading and Error States --- */}
-        {isLoading && <p className="text-center text-zinc-400">Loading notes...</p>}
+        {isLoading && <p className="text-center text-zinc-400">Loading...</p>}
         {error && <p className="text-center text-red-500">{error}</p>}
 
-        {/* --- Notes Grid --- */}
         {!isLoading && !error && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            
             {notes.map((note) => (
               <NotesNode 
                 key={note.id} 
-                title={note.title} // <-- Use DTO properties
-                // DTO doesn't have these, so we'll pass placeholders
+                title={note.title}
                 category={folderTitle}
-                subtitle="Click to open note"
-                pages="" // DTO doesn't have page count
-                onClick={() => handleNoteClick(note.id)}
+                subtitle="Click to open"
+                onClick={() => navigate(`/notes/view/${note.id}`)}
+                onDelete={(e) => handleDeleteNote(e, note.id)} // Pass delete handler
               />
             ))}
-
-            {/* "Add New Note" card */}
-            <div onClick={handleNewNoteClick}>
-              <NewNote />
-            </div>
-
+            <div onClick={handleNewNoteClick}><NewNote /></div>
           </div>
         )}
-
       </div>
     </div>
   );

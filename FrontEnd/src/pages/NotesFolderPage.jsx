@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'; // <-- Import useEffect
 import { useNavigate } from 'react-router-dom';
-import BackButton from '../components/common/backbutton';
+import BackButton from '../components/common/BackButton';
 import AddFolderCard from '../components/folders/addNode';
 import FolderNode from '../components/folders/folderNode';
 import AddFolderModal from '../components/folders/addFolderModal';

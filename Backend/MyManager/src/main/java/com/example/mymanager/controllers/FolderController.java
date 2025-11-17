@@ -32,6 +32,20 @@ public class FolderController extends BaseController { // <-- EXTEND HERE
                 .collect(Collectors.toList());
     }
 
+    @GetMapping("/{folderId}")
+    public FolderDto getFolderById(@PathVariable Long folderId) {
+        User user = getAuthenticatedUser();
+        Folder folder = folderService.getFolderById(folderId)
+                .orElseThrow(() -> new RuntimeException("Folder not found"));
+
+        // Security check
+        if (!folder.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Access Denied");
+        }
+
+        return new FolderDto(folder.getId(), folder.getTitle(), folder.getColor());
+    }
+
     // POST /api/folders
     @PostMapping
     public FolderDto createFolder(@RequestBody Folder folder) {

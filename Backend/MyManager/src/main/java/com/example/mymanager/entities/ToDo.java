@@ -1,7 +1,7 @@
 package com.example.mymanager.entities;
 
 import jakarta.persistence.*;
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name="todo")
@@ -11,7 +11,7 @@ public class ToDo {
     private Long id;
 
     @Column
-    private String catagory;
+    private String category; // Fixed typo from "catagory"
 
     @Column
     private String description;
@@ -20,17 +20,40 @@ public class ToDo {
     private String tag;
 
     @Column
-    private int status; // 1- pending, 2 - doing, 3 - done
+    private int status; // 0 - pending (red), 1 - doing (orange), 2 - done (green)
 
-    public ToDo(){
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore // Prevent infinite recursion in JSON
+    private User user;
 
+    public ToDo() {
     }
 
-    public  ToDo(String catagory1, String description1, String tag1, int status1){
-
-        this.catagory = catagory1;
-        this.description = description1;
-        this.status = status1;
-        this.tag = tag1;
+    public ToDo(String category, String description, String tag, int status, User user) {
+        this.category = category;
+        this.description = description;
+        this.tag = tag;
+        this.status = status;
+        this.user = user;
     }
+
+    // --- Getters and Setters ---
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+
+    public String getTag() { return tag; }
+    public void setTag(String tag) { this.tag = tag; }
+
+    public int getStatus() { return status; }
+    public void setStatus(int status) { this.status = status; }
+
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
 }

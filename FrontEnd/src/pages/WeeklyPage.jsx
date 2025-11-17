@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 // import { weeklyScheduleData } from '../data/weeklyScheduleData.js'; // <-- REMOVED
 import WeeklySchedule from '../components/weeklySchedule/WeeklySchedule.jsx';
 import WeekNavigator from '../components/weekNavigation/WeekNavigator.jsx';
-import BackButton from '../components/common/backbutton.jsx';
+import BackButton from '../components/common/BackButton.jsx';
 import apiClient from '../api/apiClient'; // <-- IMPORT API CLIENT
 
 // LocalStorage key
